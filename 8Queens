@@ -1,0 +1,139 @@
+#include <stdio.h>
+#include <allegro5/allegro.h>
+
+#define SIZE 8
+
+ALLEGRO_DISPLAY *display;
+ALLEGRO_EVENT_QUEUE *queue;
+ALLEGRO_TIMER *timer;
+
+int board[SIZE][SIZE];
+int queenPos[SIZE];
+
+void draw_board()
+{
+    int x, y;
+    al_clear_to_color(al_map_rgb(255, 255, 255));
+
+    // Desenha o tabuleiro
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if ((i + j) % 2 == 0) {
+                al_draw_filled_rectangle(i * 50, j * 50, (i + 1) * 50, (j + 1) * 50, al_map_rgb(238, 238, 210));
+            } else {
+                al_draw_filled_rectangle(i * 50, j * 50, (i + 1) * 50, (j + 1) * 50, al_map_rgb(118, 150, 86));
+            }
+        }
+    }
+
+    // Desenha as rainhas
+    for (int i = 0; i < SIZE; i++) {
+        x = i * 50 + 25;
+        y = queenPos[i] * 50 + 25;
+        al_draw_filled_circle(x, y, 20, al_map_rgb(0, 0, 0));
+    }
+
+    al_flip_display();
+}
+
+int check_attack(int row, int col)
+{
+    // Verifica se há alguma rainha na mesma coluna
+    for (int i = 0; i < row; i++) {
+        if (queenPos[i] == col) {
+            return 1;
+        }
+    }
+
+    // Verifica se há alguma rainha na diagonal superior
+    for (int i = row - 1, j = col - 1; i >= 0 && j >= 0; i--, j--) {
+        if (queenPos[i] == j) {
+            return 1;
+        }
+    }
+
+    // Verifica se há alguma rainha na diagonal inferior
+    for (int i = row - 1, j = col + 1; i >= 0 && j < SIZE; i--, j++) {
+        if (queenPos[i] == j) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int solve(int row)
+{
+    if (row == SIZE) {
+        return 1;
+    }
+
+    for (int col = 0; col < SIZE; col++) {
+        if (!check_attack(row, col)) {
+           
+            queenPos[row] = col;
+            board[row][col] = 1;
+            draw_board();
+            al_rest(0.5);
+
+            if (solve(row + 1)) {
+                return 1;
+            }
+
+            queenPos[row] = -1;
+            board[row][col] = 0;
+            draw_board();
+            al_rest(0.5);
+        }
+    }
+
+    return 0;
+}
+
+int main()
+{
+    // Inicializa a biblioteca Allegro
+    al_init();
+
+    // Cria o display
+    display = al_create_display(400, 400);
+    al_set_window_title(display, "Desafio das 8 Rainhas");
+
+    // Cria a fila de eventos e o timer
+    queue = al_create_event_queue();
+    timer = al_create_timer(1.0 / 60);
+
+    // Registra eventos
+    al_register_event_source(queue, al_get_display_event_source(display));
+    al_register_event_source(queue, al_get_timer_event_source(timer));
+
+    // Inicializa o tabuleiro e o array de posições das rainhas
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            board[i][j] = 0;
+        }
+        queenPos[i] = -1;
+    }
+
+    // Inicia o timer
+    al_start_timer(timer);
+
+    // Chama a função para resolver o problema
+    solve(0);
+
+    // Espera pelo evento de fechar a janela
+    ALLEGRO_EVENT event;
+    while (1) {
+        al_wait_for_event(queue, &event);
+        if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+            break;
+        }
+    }
+
+    // Libera os recursos alocados
+    al_destroy_display(display);
+    al_destroy_event_queue(queue);
+    al_destroy_timer(timer);
+
+    return 0;
+}
